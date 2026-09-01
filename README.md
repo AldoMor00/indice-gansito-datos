@@ -14,17 +14,24 @@ del repositorio de código.
 
 ## Estructura
 
+Un directorio por fuente, cada uno con su manifiesto. Las dos fuentes no se parecen y no
+comparten índice: ver la decisión #9 del repositorio de código.
+
 ```
-precios/anio=YYYY/qqp_YYYY-MM_qN.parquet     filas del catálogo objetivo
-tiendas/anio=YYYY/tiendas_YYYY-MM_qN.parquet tiendas distintas del archivo completo
-publico/                                      agregados de gold, salida del pipeline
-manifiesto.jsonl                              procedencia, una línea por archivo
+profeco/precios/anio=YYYY/qqp_YYYY-MM_qN.parquet     filas del catálogo objetivo
+profeco/tiendas/anio=YYYY/tiendas_YYYY-MM_qN.parquet tiendas del archivo completo
+profeco/manifiesto.jsonl                             una línea por archivo procesado
+
+conasami/salarios/*.csv                              salario mínimo, tal cual se sirve
+conasami/manifiesto.jsonl                            una línea por versión
+
+publico/                                             agregados de gold, salida
 ```
 
-`precios/` y `tiendas/` son **entrada** a Fabric. `publico/` es **salida**: lo escribe
+`profeco/` y `conasami/` son **entrada** a Fabric. `publico/` es **salida**: lo escribe
 el último paso del pipeline y lo consume el reporte de la cuenta gratuita de Power BI.
 
-## Esto no es el archivo original
+## Lo de Profeco no es el archivo original
 
 De cada CSV de Profeco (~155 MB) se persisten sólo dos cortes: las filas que cumplen el
 catálogo objetivo, y las tuplas distintas de tienda. **El archivo íntegro no se guarda.**
@@ -33,9 +40,15 @@ Es una concesión deliberada por el presupuesto de un portafolio, no una buena p
 Se mitiga con el manifiesto: guarda el `sha256` y la URL de origen de cada archivo, así
 que cualquier corte puede rehacerse desde la fuente de forma verificable.
 
-## manifiesto.jsonl
+Lo de CONASAMI se guarda entero, sin cortar y sin convertir: son 40 KB entre los dos
+archivos, así que no hay nada que ganar recortándolos.
 
-Una línea JSON por archivo procesado:
+## Los manifiestos
+
+Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que es la
+única forma de saber qué hay aquí sin adivinar rutas.
+
+`profeco/manifiesto.jsonl` — una línea por quincena procesada:
 
 ```json
 {
@@ -50,10 +63,30 @@ Una línea JSON por archivo procesado:
 }
 ```
 
-El `sha256` es lo que detecta que Profeco republicó una quincena corregida: si cambia,
-se vuelve a bajar con un `intento` nuevo y bronze conserva las dos versiones.
+`conasami/manifiesto.jsonl` — una línea por versión de cada archivo:
 
-## Fuente
+```json
+{
+  "url_origen": "https://repodatos.atdt.gob.mx/api_update/conasami/...",
+  "sha256": "...",
+  "bytes": 18360,
+  "filas": 685,
+  "archivo": "sm_real_indice",
+  "descargado_utc": "2026-08-31T12:00:04Z",
+  "version": 1
+}
+```
 
-Profeco, *Quién es Quién en los Precios*, vía `repodatos.atdt.gob.mx`.
-Datos abiertos del Gobierno de México.
+En las dos, el `sha256` es lo que detecta que la fuente republicó algo. Cambia en
+Profeco y la quincena se rebaja con un `intento` nuevo; cambia en CONASAMI y entra una
+`version` nueva. En ninguna se pisa lo anterior: bronze conserva las dos.
+
+## Fuentes
+
+Datos abiertos del Gobierno de México, las dos vía `repodatos.atdt.gob.mx`:
+
+- Profeco, *Quién es Quién en los Precios*
+- CONASAMI, salario mínimo
+
+Qué trae cada una y qué no es obvio de ellas está en
+[`docs/fuentes.md`](https://github.com/AldoMor00/indice-gansito/blob/main/docs/fuentes.md).
