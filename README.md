@@ -14,7 +14,7 @@ del repositorio de código.
 
 ## Estructura
 
-Un directorio por fuente, cada uno con su manifiesto. Las dos fuentes no se parecen y no
+Un directorio por fuente, cada uno con su manifiesto. Las tres fuentes no se parecen y no
 comparten índice: ver la decisión #9 del repositorio de código.
 
 ```
@@ -24,6 +24,9 @@ profeco/manifiesto.jsonl                             una línea por archivo proc
 
 conasami/salarios/*.csv                              salario mínimo, tal cual se sirve
 conasami/manifiesto.jsonl                            una línea por versión
+
+inpc/serie/inpc_quincenal.json                       INPC quincenal, tal cual lo sirve INEGI
+inpc/manifiesto.jsonl                                una línea por versión
 
 publico/*.parquet                                    las ocho tablas de gold, salida
 ```
@@ -56,7 +59,9 @@ procesada. Cuando eso pasa, nada se sobrescribe —la versión corregida entra c
 nuevo, con su parquet `_iN`— y la línea del intento más alto es la que manda.
 
 Lo de CONASAMI se guarda entero, sin cortar y sin convertir: son 40 KB entre los dos
-archivos, así que no hay nada que ganar recortándolos.
+archivos, así que no hay nada que ganar recortándolos. El INPC igual, por lo mismo: 140 KB
+del JSON tal como lo sirve la API de INEGI. Su `url_origen` lleva `{token}` en lugar del
+valor, porque el token va en la URL y no tiene nada que hacer en un repositorio público.
 
 ## Los manifiestos
 
