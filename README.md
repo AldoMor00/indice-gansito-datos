@@ -25,11 +25,16 @@ profeco/manifiesto.jsonl                             una línea por archivo proc
 conasami/salarios/*.csv                              salario mínimo, tal cual se sirve
 conasami/manifiesto.jsonl                            una línea por versión
 
-publico/                                             agregados de gold, salida
+publico/*.parquet                                    las ocho tablas de gold, salida
 ```
 
 `profeco/` y `conasami/` son **entrada** a Fabric. `publico/` es **salida**: lo escribe
-el último paso del pipeline y lo consume el reporte de la cuenta gratuita de Power BI.
+`nb_50_export` y lo lee, por URL anónima, el modelo import del reporte público.
+
+Son las ocho tablas de gold tal cual, un parquet plano por tabla —sin particionar y sin
+`_delta_log`—, 1.36 MB entre todas. Están aquí porque la capacidad de Fabric es una trial y
+el reporte público necesita un origen que le sobreviva; bronze y silver no, porque nada
+fuera de Fabric los lee. La decisión #6 del repositorio de código lo explica.
 
 ## Lo de Profeco no es el archivo original
 
@@ -39,6 +44,11 @@ catálogo objetivo, y las tuplas distintas de tienda. **El archivo íntegro no s
 Es una concesión deliberada por el presupuesto de un portafolio, no una buena práctica.
 Se mitiga con el manifiesto: guarda el `sha256` y la URL de origen de cada archivo, así
 que cualquier corte puede rehacerse desde la fuente de forma verificable.
+
+Las primeras 46 líneas traen una `url_origen` de `repodatos.atdt.gob.mx`, que hoy contesta
+503. Su `sha256` sigue siendo válido: Profeco publica ahora por bundle anual en su portal
+y esos bundles traen los mismos archivos, byte por byte —verificado sobre las 46—. La
+decisión #34 del repositorio de código lo explica.
 
 Lo de CONASAMI se guarda entero, sin cortar y sin convertir: son 40 KB entre los dos
 archivos, así que no hay nada que ganar recortándolos.
@@ -52,7 +62,7 @@ Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que
 
 ```json
 {
-  "url_origen": "https://repodatos.atdt.gob.mx/api_update/profeco/...",
+  "url_origen": "https://datos.profeco.gob.mx/datos_abiertos/file.php?t=...#QQP_2026/01-2026_Q1.csv",
   "sha256": "...",
   "bytes": 162849302,
   "filas_leidas": 1284933,
