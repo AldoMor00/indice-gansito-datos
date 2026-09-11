@@ -75,6 +75,7 @@ Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que
   "url_origen": "https://datos.profeco.gob.mx/datos_abiertos/file.php?t=...#QQP_2026/01-2026_Q1.csv",
   "sha256": "...",
   "crc32": 4049749088,
+  "codificacion": "utf-8",
   "bytes": 162849302,
   "filas_leidas": 1284933,
   "filas_filtradas": 4118,
