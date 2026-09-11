@@ -50,6 +50,11 @@ Las primeras 46 líneas traen una `url_origen` de `repodatos.atdt.gob.mx`, que h
 y esos bundles traen los mismos archivos, byte por byte —verificado sobre las 46—. La
 decisión #34 del repositorio de código lo explica.
 
+El `crc32` es el mismo que el zip del portal guarda en su directorio central, y está para
+poder comparar sin descomprimir: así se detecta que Profeco reescribió una quincena ya
+procesada. Cuando eso pasa, nada se sobrescribe —la versión corregida entra como `intento`
+nuevo, con su parquet `_iN`— y la línea del intento más alto es la que manda.
+
 Lo de CONASAMI se guarda entero, sin cortar y sin convertir: son 40 KB entre los dos
 archivos, así que no hay nada que ganar recortándolos.
 
@@ -64,6 +69,7 @@ Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que
 {
   "url_origen": "https://datos.profeco.gob.mx/datos_abiertos/file.php?t=...#QQP_2026/01-2026_Q1.csv",
   "sha256": "...",
+  "crc32": 4049749088,
   "bytes": 162849302,
   "filas_leidas": 1284933,
   "filas_filtradas": 4118,
