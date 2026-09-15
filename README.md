@@ -2,20 +2,19 @@
 
 Zona raw del proyecto [Índice Gansito](https://github.com/AldoMor00/indice-gansito).
 
-**Este repositorio lo escribe GitHub Actions, no una persona.** Fabric lee de aquí.
+**Este repositorio lo escriben procesos, no una persona**: la ingesta de GitHub Actions y, en
+`publico/`, el export de gold desde Fabric. Fabric lee de aquí.
 
-## Por qué los datos están en git
-
-Porque la capacidad de Fabric es una trial y va a desaparecer, y con ella OneLake.
-Con el histórico afuera, Fabric queda desechable: se borra el workspace y se
-reconstruye sin perder un día de historia. El razonamiento completo está en
-[`docs/decisiones.md`](https://github.com/AldoMor00/indice-gansito/blob/main/docs/decisiones.md)
-del repositorio de código.
+Los datos viven en git y no en Fabric porque la capacidad es una trial y va a desaparecer; con el
+histórico afuera, el workspace se borra y se reconstruye sin perder un día. Es la
+[decisión #1](https://github.com/AldoMor00/indice-gansito/blob/main/docs/decisiones.md) del
+repositorio de código; las demás que explican este repo son la #2 (qué se guarda de Profeco), la
+#9 (por qué cada fuente va por su lado), la #34 (de dónde se baja Profeco hoy) y la #6 (la copia
+pública de gold).
 
 ## Estructura
 
-Un directorio por fuente, cada uno con su manifiesto. Las tres fuentes no se parecen y no
-comparten índice: ver la decisión #9 del repositorio de código.
+Un directorio por fuente, cada uno con su manifiesto. No comparten índice.
 
 ```
 profeco/precios/anio=YYYY/qqp_YYYY-MM_qN.parquet     filas del catálogo objetivo
@@ -28,47 +27,32 @@ conasami/manifiesto.jsonl                            una línea por versión
 inpc/serie/inpc_quincenal.json                       INPC quincenal, tal cual lo sirve INEGI
 inpc/manifiesto.jsonl                                una línea por versión
 
-publico/*.parquet                                    las ocho tablas de gold, salida
+publico/*.parquet                                    las ocho tablas de gold
 ```
 
-`profeco/` y `conasami/` son **entrada** a Fabric. `publico/` es **salida**: lo escribe
-`nb_50_export` y lo lee, por URL anónima, el modelo import del reporte público.
-
-Son las ocho tablas de gold tal cual, un parquet plano por tabla —sin particionar y sin
-`_delta_log`—, 1.36 MB entre todas. Están aquí porque la capacidad de Fabric es una trial y
-el reporte público necesita un origen que le sobreviva; bronze y silver no, porque nada
-fuera de Fabric los lee. La decisión #6 del repositorio de código lo explica.
+`profeco/`, `conasami/` e `inpc/` son **entrada** a Fabric. `publico/` es **salida**: lo exporta
+`nb_50_export` desde gold, y lo lee, por URL anónima, el modelo import del reporte público.
 
 ## Lo de Profeco no es el archivo original
 
-De cada CSV de Profeco (~155 MB) se persisten sólo dos cortes: las filas que cumplen el
-catálogo objetivo, y las tuplas distintas de tienda. **El archivo íntegro no se guarda.**
+De cada CSV de Profeco se persisten dos cortes: las filas que cumplen el catálogo objetivo, y las
+tuplas distintas de tienda. **El archivo íntegro no se guarda.** Es una concesión por el
+presupuesto de un portafolio, no una buena práctica, y se mitiga con el manifiesto: guarda el
+`sha256` y la URL de origen de cada archivo, así que cualquier corte puede rehacerse desde la
+fuente de forma verificable.
 
-Es una concesión deliberada por el presupuesto de un portafolio, no una buena práctica.
-Se mitiga con el manifiesto: guarda el `sha256` y la URL de origen de cada archivo, así
-que cualquier corte puede rehacerse desde la fuente de forma verificable.
+Las líneas más viejas traen una `url_origen` de `repodatos.atdt.gob.mx`, que hoy contesta 503.
+Su `sha256` sigue siendo válido: los bundles anuales del portal de Profeco traen los mismos
+archivos byte por byte.
 
-Las primeras 46 líneas traen una `url_origen` de `repodatos.atdt.gob.mx`, que hoy contesta
-503. Su `sha256` sigue siendo válido: Profeco publica ahora por bundle anual en su portal
-y esos bundles traen los mismos archivos, byte por byte —verificado sobre las 46—. La
-decisión #34 del repositorio de código lo explica.
-
-El `crc32` es el mismo que el zip del portal guarda en su directorio central, y está para
-poder comparar sin descomprimir: así se detecta que Profeco reescribió una quincena ya
-procesada. Cuando eso pasa, nada se sobrescribe —la versión corregida entra como `intento`
-nuevo, con su parquet `_iN`— y la línea del intento más alto es la que manda.
-
-Lo de CONASAMI se guarda entero, sin cortar y sin convertir: son 40 KB entre los dos
-archivos, así que no hay nada que ganar recortándolos. El INPC igual, por lo mismo: 140 KB
-del JSON tal como lo sirve la API de INEGI. Su `url_origen` lleva `{token}` en lugar del
-valor, porque el token va en la URL y no tiene nada que hacer en un repositorio público.
+CONASAMI e INEGI se guardan enteros, sin cortar ni convertir. La `url_origen` de INEGI lleva
+`{token}` en lugar del valor.
 
 ## Los manifiestos
 
-Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que es la
-única forma de saber qué hay aquí sin adivinar rutas.
+Uno por fuente. Son el índice: GitHub no expone listado de directorio.
 
-`profeco/manifiesto.jsonl` — una línea por quincena procesada:
+`profeco/manifiesto.jsonl`, una línea por quincena procesada:
 
 ```json
 {
@@ -85,7 +69,12 @@ Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que
 }
 ```
 
-`conasami/manifiesto.jsonl` — una línea por versión de cada archivo:
+El `crc32` es el que el zip del portal guarda en su directorio central, para detectar sin
+descomprimir que Profeco reescribió una quincena ya procesada. Cuando pasa, nada se sobrescribe:
+la versión corregida entra como `intento` nuevo, con su parquet `_iN`, y la línea del intento más
+alto es la que manda. `codificacion` dice cómo se leyó el CSV (`utf-8` o `cp1252`).
+
+`conasami/manifiesto.jsonl` e `inpc/manifiesto.jsonl`, una línea por versión de cada archivo:
 
 ```json
 {
@@ -99,16 +88,15 @@ Uno por fuente. Son el índice: GitHub no expone listado de directorio, así que
 }
 ```
 
-En las dos, el `sha256` es lo que detecta que la fuente republicó algo. Cambia en
-Profeco y la quincena se rebaja con un `intento` nuevo; cambia en CONASAMI y entra una
-`version` nueva. En ninguna se pisa lo anterior: bronze conserva las dos.
+En las tres, el `sha256` es lo que detecta que la fuente republicó algo. Cambia en Profeco y la
+quincena entra con un `intento` nuevo; cambia en CONASAMI o INEGI y entra una `version` nueva.
+Nunca se pisa lo anterior.
 
 ## Fuentes
 
-Datos abiertos del Gobierno de México, las dos vía `repodatos.atdt.gob.mx`:
-
-- Profeco, *Quién es Quién en los Precios*
-- CONASAMI, salario mínimo
+- **Profeco**, *Quién es Quién en los Precios*, del portal `datos.profeco.gob.mx`.
+- **CONASAMI**, salario mínimo, de `repodatos.atdt.gob.mx`.
+- **INEGI**, INPC quincenal, de su API de indicadores.
 
 Qué trae cada una y qué no es obvio de ellas está en
 [`docs/fuentes.md`](https://github.com/AldoMor00/indice-gansito/blob/main/docs/fuentes.md).
